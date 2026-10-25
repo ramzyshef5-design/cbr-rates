@@ -1,0 +1,40 @@
+name: CBR Rates
+
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: rates-update
+  cancel-in-progress: false
+
+jobs:
+  rates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Fetch CBR rates
+        run: python rates.py
+      - name: Show result
+        run: cat rates.json
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add rates.json
+          if git diff --cached --quiet; then
+            echo "no changes"
+          else
+            git commit -m 'chore: обновление курсов ЦБ РФ'
+            git push
+          fi
